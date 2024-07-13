@@ -35,10 +35,10 @@ contract Group is Initializable, OwnableUpgradeable {
     event FundsSplit(address indexed from, address indexed to, uint256 amount);
     event ERC20FundsSplit(address indexed from, address indexed to, uint256 amount, address token);
 
-function _addUser(address user) internal {
-       _members.push(user);
+    function _addUser(address user) internal {
+        _members.push(user);
     }
-    
+
     function initialize(address _admin, address _tokenAddress) external initializer {
         __Ownable_init(_admin);
         admin = _admin;
@@ -47,7 +47,7 @@ function _addUser(address user) internal {
     }
 
     //Retrieve the list of all current members of the group
-    function members() external view returns(address[] memory){
+    function members() external view returns (address[] memory) {
         return _members;
     }
 
@@ -78,9 +78,9 @@ function _addUser(address user) internal {
     }
 
     // Any group member can add an expense
-    function addExpense(uint256 amount, string memory note) external {
+    function addExpense(address spender, uint256 amount, string memory note) external {
         require(isMember(msg.sender), "Only group members can add expenses");
-        expenses[msg.sender].push(Expense(msg.sender, amount, note));
+        expenses[msg.sender].push(Expense(spender, amount, note));
         emit ExpenseAdded(msg.sender, amount, note);
     }
 
@@ -88,7 +88,7 @@ function _addUser(address user) internal {
     function removeExpense(address spender, uint256 index) external onlyAdmin {
         require(index < expenses[spender].length, "Invalid expense index");
         Expense memory expense = expenses[spender][index];
-      
+
         // Remove expense from the list
         for (uint256 i = index; i < expenses[spender].length - 1; i++) {
             expenses[spender][i] = expenses[spender][i + 1];
@@ -116,7 +116,7 @@ function _addUser(address user) internal {
 
     // Check if the contract has sufficient funds to settle all positive balances
     function isFunded() external view returns (bool) {
-         uint256 total = getSummary();
+        uint256 total = getSummary();
         return token.balanceOf(address(this)) >= total;
     }
 
@@ -136,7 +136,7 @@ function _addUser(address user) internal {
         uint256 total = getSummary();
         return token.balanceOf(address(this)) >= total;
     }
-    
+
     // summary list of members based on their expenses
 
     function getSummaryList() external view returns (address[] memory, uint256[] memory) {
@@ -156,7 +156,6 @@ function _addUser(address user) internal {
         return (memberAddresses, totalExpenses);
     }
 
-
     // Split ERC20 funds among members based on their expenses
     function splitFunds() external {
         require(_isFunded(), "Contract does not have sufficient funds");
@@ -173,7 +172,6 @@ function _addUser(address user) internal {
         }
     }
 
-
     // Check if an address is a member of the group
     function isMember(address user) public view returns (bool) {
         for (uint256 i = 0; i < _members.length; i++) {
@@ -183,6 +181,4 @@ function _addUser(address user) internal {
         }
         return false;
     }
-
-
 }
