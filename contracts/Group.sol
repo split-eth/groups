@@ -35,10 +35,15 @@ contract Group is Initializable, OwnableUpgradeable {
     event FundsSplit(address indexed from, address indexed to, uint256 amount);
     event ERC20FundsSplit(address indexed from, address indexed to, uint256 amount, address token);
 
+function _addUser(address user) internal {
+        members.push(user);
+    }
+    
     function initialize(address _admin, address _tokenAddress) external initializer {
         __Ownable_init(_admin);
         admin = _admin;
         token = IERC20(_tokenAddress);
+        _addUser(_admin);
     }
 
     // Set userName and address
@@ -48,7 +53,7 @@ contract Group is Initializable, OwnableUpgradeable {
 
     // Admin can add a new user to the group
     function addUser(address user) external onlyAdmin {
-        members.push(user);
+        _addUser(user);
     }
 
     // Admin can remove a user from the group
@@ -159,7 +164,7 @@ contract Group is Initializable, OwnableUpgradeable {
 
 
     // Check if an address is a member of the group
-    function isMember(address user) internal view returns (bool) {
+    function isMember(address user) public view returns (bool) {
         for (uint256 i = 0; i < members.length; i++) {
             if (members[i] == user) {
                 return true;
