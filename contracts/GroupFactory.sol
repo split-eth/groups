@@ -20,7 +20,7 @@ contract GroupFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     }
 
     function initialize(address anOwner) external initializer {
-        __Ownable_init();
+        __Ownable_init(anOwner);
         __UUPSUpgradeable_init();
 
         transferOwnership(anOwner);
@@ -28,8 +28,8 @@ contract GroupFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         groupImplementation = new Group();
     }
 
-    function createGroup(address owner, bytes32 hash) external returns (Group ret) {
-        address addr = getAddress(owner, hash);
+    function createGroup(address owner, address token, bytes32 hash) external returns (Group ret) {
+        address addr = getAddress(owner, token, hash);
 
         emit GroupCreated(addr, hash);
 
@@ -41,13 +41,13 @@ contract GroupFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
             payable(
                 new ERC1967Proxy{salt: hash}(
                     address(groupImplementation),
-                    abi.encodeWithSignature("initialize(address,address)", owner, address(this))
+                    abi.encodeCall(Group.initialize, (owner, token))
                 )
             )
         );
     }
 
-    function getAddress(address owner, bytes32 hash) public view returns (address) {
+    function getAddress(address owner, address token, bytes32 hash) public view returns (address) {
         return Create2.computeAddress(
             hash,
             keccak256(
@@ -55,7 +55,7 @@ contract GroupFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
                     type(ERC1967Proxy).creationCode,
                     abi.encode(
                         address(groupImplementation),
-                        abi.encodeWithSignature("initialize(address,address)", owner, address(this))
+                    abi.encodeCall(Group.initialize, (owner, token))
                     )
                 )
             )
