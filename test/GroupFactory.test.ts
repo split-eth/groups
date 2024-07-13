@@ -17,20 +17,20 @@ describe("GroupFactory", function () {
     GroupFactory = await ethers.getContractFactory("GroupFactory");
 
     groupFactory = await GroupFactory.deploy();
-    await groupFactory.deployed();
+    await groupFactory.waitForDeployment();
   });
 
   describe("Functionality", function () {
     it("Should create a new Group contract", async function () {
       const ownerAddress = await addr1.getAddress();
-      const tokenAddress = ethers.constants.AddressZero;
+      const tokenAddress = ethers.ZeroAddress;
       const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
 
       const tx = await groupFactory.createGroup(ownerAddress, tokenAddress, groupHash);
       await tx.wait();
 
       const groupAddress = await groupFactory.groups(groupHash);
-      expect(groupAddress).to.not.equal(ethers.constants.AddressZero);
+      expect(groupAddress).to.not.equal(ethers.ZeroAddress);
 
       const group = await ethers.getContractAt("Group", groupAddress);
       const admin = await group.admin();
@@ -39,7 +39,7 @@ describe("GroupFactory", function () {
 
     it("Should revert if trying to create a group with an existing hash", async function () {
       const ownerAddress = await addr1.getAddress();
-      const tokenAddress = ethers.constants.AddressZero;
+      const tokenAddress = ethers.ZeroAddress;
       const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
 
       await groupFactory.createGroup(ownerAddress, tokenAddress, groupHash);
@@ -48,7 +48,7 @@ describe("GroupFactory", function () {
 
     it("Should return the correct address using Create2", async function () {
       const ownerAddress = await addr1.getAddress();
-      const tokenAddress = ethers.constants.AddressZero;
+      const tokenAddress = ethers.ZeroAddress;
       const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
 
       const computedAddress = await groupFactory.getAddress(ownerAddress, tokenAddress, groupHash);
@@ -72,4 +72,12 @@ describe("GroupFactory", function () {
 
   describe("Events", function () {
     it("Should emit GroupCreated event on group creation", async function () {
-      const ownerAddress = await addr1.getAddress
+      const ownerAddress = await addr1.getAddress();
+      const tokenAddress = ethers.ZeroAddress;
+      const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
+
+      await expect(groupFactory.createGroup(ownerAddress, tokenAddress, groupHash))
+        .to.emit(groupFactory, 'GroupCreated')
+        .withArgs(await groupFactory.getAddress(ownerAddress, tokenAddress, groupHash), groupHash);
+    });
+ 

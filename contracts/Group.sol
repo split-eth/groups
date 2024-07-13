@@ -16,7 +16,7 @@ contract Group is Initializable, OwnableUpgradeable {
     mapping(address => string) public userNames;
     mapping(address => int256) public balances;
     mapping(address => Expense[]) public expenses;
-    address[] public members;
+    address[] internal _members;
 
     IERC20 public token;
 
@@ -36,7 +36,7 @@ contract Group is Initializable, OwnableUpgradeable {
     event ERC20FundsSplit(address indexed from, address indexed to, uint256 amount, address token);
 
 function _addUser(address user) internal {
-        members.push(user);
+       _members.push(user);
     }
     
     function initialize(address _admin, address _tokenAddress) external initializer {
@@ -44,6 +44,11 @@ function _addUser(address user) internal {
         admin = _admin;
         token = IERC20(_tokenAddress);
         _addUser(_admin);
+    }
+
+    //Retrieve the list of all current members of the group
+    function members() external view returns(address[] memory){
+        return _members;
     }
 
     // Set userName and address
@@ -60,15 +65,15 @@ function _addUser(address user) internal {
     function removeUser(address user) external onlyAdmin {
         uint256 index;
         bool userFound = false;
-        for (index = 0; index < members.length; index++) {
-            if (members[index] == user) {
+        for (index = 0; index < _members.length; index++) {
+            if (_members[index] == user) {
                 userFound = true;
                 break;
             }
         }
         if (userFound) {
-            members[index] = members[members.length - 1];
-            members.pop();
+            _members[index] = _members[_members.length - 1];
+            _members.pop();
         }
     }
 
@@ -95,14 +100,14 @@ function _addUser(address user) internal {
     // Retrieve all recorded expenses
     function getExpenses() external view returns (Expense[] memory) {
         uint256 totalExpensesCount = 0;
-        for (uint256 i = 0; i < members.length; i++) {
-            totalExpensesCount += expenses[members[i]].length;
+        for (uint256 i = 0; i < _members.length; i++) {
+            totalExpensesCount += expenses[_members[i]].length;
         }
         Expense[] memory allExpenses = new Expense[](totalExpensesCount);
         uint256 index = 0;
-        for (uint256 i = 0; i < members.length; i++) {
-            for (uint256 j = 0; j < expenses[members[i]].length; j++) {
-                allExpenses[index] = expenses[members[i]][j];
+        for (uint256 i = 0; i < _members.length; i++) {
+            for (uint256 j = 0; j < expenses[_members[i]].length; j++) {
+                allExpenses[index] = expenses[_members[i]][j];
                 index++;
             }
         }
@@ -118,9 +123,9 @@ function _addUser(address user) internal {
     // Summary of total expenses for all members
     function getSummary() public view returns (uint256) {
         uint256 totalAmount = 0;
-        for (uint256 i = 0; i < members.length; i++) {
-            for (uint256 j = 0; j < expenses[members[i]].length; j++) {
-                totalAmount += expenses[members[i]][j].amount;
+        for (uint256 i = 0; i < _members.length; i++) {
+            for (uint256 j = 0; j < expenses[_members[i]].length; j++) {
+                totalAmount += expenses[_members[i]][j].amount;
             }
         }
         return totalAmount;
@@ -133,31 +138,37 @@ function _addUser(address user) internal {
     }
     
     // summary list of members based on their expenses
-    function getSummaryList() external {
-        for (uint256 i = 0; i < members.length; i++) {
+
+    function getSummaryList() external view returns (address[] memory, uint256[] memory) {
+        uint256 memberCount = _members.length;
+        address[] memory memberAddresses = new address[](memberCount);
+        uint256[] memory totalExpenses = new uint256[](memberCount);
+
+        for (uint256 i = 0; i < memberCount; i++) {
+            memberAddresses[i] = _members[i];
             uint256 totalExpense = 0;
-            for (uint256 j = 0; j < expenses[members[i]].length; j++) {
-                totalExpense += expenses[members[i]][j].amount;
+            for (uint256 j = 0; j < expenses[_members[i]].length; j++) {
+                totalExpense += expenses[_members[i]][j].amount;
             }
-            if (totalExpense > 0) {
-                token.transfer(members[i], totalExpense);
-                emit FundsSplit(address(this), members[i], totalExpense);
-            }
+            totalExpenses[i] = totalExpense;
         }
+
+        return (memberAddresses, totalExpenses);
     }
+
 
     // Split ERC20 funds among members based on their expenses
     function splitFunds() external {
         require(_isFunded(), "Contract does not have sufficient funds");
 
-        for (uint256 i = 0; i < members.length; i++) {
+        for (uint256 i = 0; i < _members.length; i++) {
             uint256 totalExpense = 0;
-            for (uint256 j = 0; j < expenses[members[i]].length; j++) {
-                totalExpense += expenses[members[i]][j].amount;
+            for (uint256 j = 0; j < expenses[_members[i]].length; j++) {
+                totalExpense += expenses[_members[i]][j].amount;
             }
             if (totalExpense > 0) {
-                token.transfer(members[i], totalExpense);
-                emit ERC20FundsSplit(address(this), members[i], totalExpense, address(token));
+                token.transfer(_members[i], totalExpense);
+                emit ERC20FundsSplit(address(this), _members[i], totalExpense, address(token));
             }
         }
     }
@@ -165,11 +176,13 @@ function _addUser(address user) internal {
 
     // Check if an address is a member of the group
     function isMember(address user) public view returns (bool) {
-        for (uint256 i = 0; i < members.length; i++) {
-            if (members[i] == user) {
+        for (uint256 i = 0; i < _members.length; i++) {
+            if (_members[i] == user) {
                 return true;
             }
         }
         return false;
     }
+
+
 }
