@@ -1,22 +1,38 @@
-import { ethers } from 'hardhat';
+import "@nomicfoundation/hardhat-toolbox";
+import { ethers, run } from "hardhat";
 
 async function main() {
-    const [deployer] = await ethers.getSigners();
+  const GroupFactory = await ethers.getContractFactory("GroupFactory");
+  const groupFactory = await GroupFactory.deploy();
 
-    console.log('Deploying contracts with the account:', deployer.address);
+  console.log(
+    "GroupFactory deployed to:",
+    await (groupFactory as any).getAddress()
+  );
 
-    const GroupFactory = await ethers.getContractFactory('GroupFactory');
-    const groupFactory = await GroupFactory.deploy(deployer.address, {
-        gasLimit: 3000000,
+  const tx = groupFactory.deploymentTransaction();
+  if (!tx) {
+    throw new Error("Deployment transaction not found");
+  }
+
+  console.log("⏳ waiting to be confirmed...");
+  tx.wait(5);
+
+  console.log("🧐 verifying...\n");
+
+  try {
+    await run("verify:verify", {
+      address: await (groupFactory as any).getAddress(),
+      constructorArguments: [],
     });
-
-    console.log('GroupFactory deployed to:', groupFactory.address);
-    
+  } catch (error: any) {
+    console.log("Error verifying contract: %s\n", error && error.message);
+  }
 }
 
 main()
-    .then(() => process.exit(0))
-    .catch((error) => {
-        console.error(error);
-        process.exit(1);
-    });
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
