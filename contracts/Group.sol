@@ -71,7 +71,6 @@ contract Group is Initializable, OwnableUpgradeable {
     function addExpense(uint256 amount, string memory note) external {
         require(isMember(msg.sender), "Only group members can add expenses");
         expenses[msg.sender].push(Expense(msg.sender, amount, note));
-
         emit ExpenseAdded(msg.sender, amount, note);
     }
 
@@ -107,18 +106,19 @@ contract Group is Initializable, OwnableUpgradeable {
 
     // Check if the contract has sufficient funds to settle all positive balances
     function isFunded() external view returns (bool) {
-        return _isFunded();
+         uint256 total = getSummary();
+        return token.balanceOf(address(this)) >= total;
     }
 
-    //summary
-    function getSummary() public view returns (uint256){
-        uint256 totlatAmount = 0;
+    // Summary of total expenses for all members
+    function getSummary() public view returns (uint256) {
+        uint256 totalAmount = 0;
         for (uint256 i = 0; i < members.length; i++) {
-            if (balances[members[i]] > 0) {
-                totlatAmount += uint256(balances[members[i]]);
+            for (uint256 j = 0; j < expenses[members[i]].length; j++) {
+                totalAmount += expenses[members[i]][j].amount;
             }
         }
-        return totlatAmount;
+        return totalAmount;
     }
 
     // Internal function to check if the contract has sufficient funds
@@ -127,15 +127,18 @@ contract Group is Initializable, OwnableUpgradeable {
         return token.balanceOf(address(this)) >= total;
     }
     
-    // Split ERC20 funds among members based on their balances
+    // Split ERC20 funds among members based on their expenses
     function splitFunds() external {
         require(_isFunded(), "Contract does not have sufficient funds");
 
         for (uint256 i = 0; i < members.length; i++) {
-            if (balances[members[i]] > 0) {
-                address recipient = members[i];
-                uint256 amount = uint256(balances[members[i]]);
-                emit ERC20FundsSplit(address(this), recipient, amount, address(token));
+            uint256 totalExpense = 0;
+            for (uint256 j = 0; j < expenses[members[i]].length; j++) {
+                totalExpense += expenses[members[i]][j].amount;
+            }
+            if (totalExpense > 0) {
+                token.transfer(members[i], totalExpense);
+                emit ERC20FundsSplit(address(this), members[i], totalExpense, address(token));
             }
         }
     }
@@ -150,6 +153,3 @@ contract Group is Initializable, OwnableUpgradeable {
         return false;
     }
 }
-
-
-

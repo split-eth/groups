@@ -11,6 +11,7 @@ async function main() {
     });
 
     console.log('GroupFactory deployed to:', groupFactory.address);
+    
 }
 
 main()

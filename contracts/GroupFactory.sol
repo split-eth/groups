@@ -1,32 +1,20 @@
 // SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "./Group.sol";
 
-contract GroupFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
+contract GroupFactory{
     Group public groupImplementation;
     mapping(bytes32 => address) public groups;
 
     event GroupCreated(address indexed groupAddress, bytes32 indexed groupHash);
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(address anOwner) external initializer {
-        __Ownable_init(anOwner);
-        __UUPSUpgradeable_init();
-
-        transferOwnership(anOwner);
-
         groupImplementation = new Group();
     }
+
 
     function createGroup(address owner, address token, bytes32 hash) external returns (Group ret) {
         address addr = getAddress(owner, token, hash);
@@ -62,11 +50,4 @@ contract GroupFactory is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         );
     }
 
-    function upgradeGroupImplementation(address newImplementation) external onlyOwner {
-        groupImplementation = Group(newImplementation);
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
-        (newImplementation);
-    }
 }

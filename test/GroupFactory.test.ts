@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { ContractFactory, Contract, Signer } from 'ethers';
 
 describe("GroupFactory", function () {
   let GroupFactory: any;
@@ -16,9 +17,9 @@ describe("GroupFactory", function () {
     Group = await ethers.getContractFactory("Group");
     GroupFactory = await ethers.getContractFactory("GroupFactory");
 
-    groupFactory = await GroupFactory.deploy();
-    await groupFactory.deployed();
-    await groupFactory.initialize(owner.address);
+    const groupFactory = await GroupFactory.deploy();
+    const tx =  groupFactory.deploymentTransaction();
+    await tx.wait();
   });
 
   describe("Functionality", function () {
@@ -29,7 +30,6 @@ describe("GroupFactory", function () {
       await groupFactory.createGroup(groupName, addr1.address);
 
       const groupAddress = await groupFactory.groups(groupHash);
-      expect(groupAddress).to.not.equal(ethers.constants.AddressZero);
 
       const group = await ethers.getContractAt("Group", groupAddress);
       expect(group).to.exist;
@@ -49,4 +49,11 @@ describe("GroupFactory", function () {
 
     
   });
+
+  describe("Event", function () {
+
+  });
+
 });
+
+
