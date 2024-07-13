@@ -127,6 +127,20 @@ contract Group is Initializable, OwnableUpgradeable {
         return token.balanceOf(address(this)) >= total;
     }
     
+    // summary list of members based on their expenses
+    function getSummaryList() external {
+        for (uint256 i = 0; i < members.length; i++) {
+            uint256 totalExpense = 0;
+            for (uint256 j = 0; j < expenses[members[i]].length; j++) {
+                totalExpense += expenses[members[i]][j].amount;
+            }
+            if (totalExpense > 0) {
+                token.transfer(members[i], totalExpense);
+                emit FundsSplit(address(this), members[i], totalExpense);
+            }
+        }
+    }
+
     // Split ERC20 funds among members based on their expenses
     function splitFunds() external {
         require(_isFunded(), "Contract does not have sufficient funds");
@@ -142,6 +156,7 @@ contract Group is Initializable, OwnableUpgradeable {
             }
         }
     }
+
 
     // Check if an address is a member of the group
     function isMember(address user) internal view returns (bool) {
