@@ -16,42 +16,68 @@ describe("GroupFactory", function () {
     Group = await ethers.getContractFactory("Group");
     GroupFactory = await ethers.getContractFactory("GroupFactory");
 
-    const groupFactory = await GroupFactory.deploy();
-    const tx =  groupFactory.deploymentTransaction();
-    await tx.wait();
+    groupFactory = await GroupFactory.deploy();
+    await groupFactory.waitForDeployment();
   });
-  
+
   describe("Functionality", function () {
     it("Should create a new Group contract", async function () {
       const ownerAddress = await addr1.getAddress();
-      const tokenAddress = ethers.AddressZero;
+      const tokenAddress = ethers.ZeroAddress;
       const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
 
       const tx = await groupFactory.createGroup(ownerAddress, tokenAddress, groupHash);
       await tx.wait();
 
       const groupAddress = await groupFactory.groups(groupHash);
-      expect(groupAddress).to.not.equal(ethers.AddressZero);
+      expect(groupAddress).to.not.equal(ethers.ZeroAddress);
 
       const group = await ethers.getContractAt("Group", groupAddress);
       const admin = await group.admin();
       expect(admin).to.equal(ownerAddress);
     });
-  
-      it("Should revert if trying to create a group with an existing hash", async function () {
-        const ownerAddress = await addr1.getAddress();
-        const tokenAddress = ethers.AddressZero;
-        const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
-  
-        await groupFactory.createGroup(ownerAddress, tokenAddress, groupHash);
-        await expect(groupFactory.createGroup(ownerAddress, tokenAddress, groupHash)).to.be.reverted;
-      });
-  
-  });   
-  
-  
-});
-  
-  
 
+    it("Should revert if trying to create a group with an existing hash", async function () {
+      const ownerAddress = await addr1.getAddress();
+      const tokenAddress = ethers.ZeroAddress;
+      const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
 
+      await groupFactory.createGroup(ownerAddress, tokenAddress, groupHash);
+      await expect(groupFactory.createGroup(ownerAddress, tokenAddress, groupHash)).to.be.reverted;
+    });
+
+    it("Should return the correct address using Create2", async function () {
+      const ownerAddress = await addr1.getAddress();
+      const tokenAddress = ethers.ZeroAddress;
+      const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
+
+      const computedAddress = await groupFactory.getAddress(ownerAddress, tokenAddress, groupHash);
+
+      const salt = groupHash;
+      const bytecode = ethers.solidityPack(
+        ['bytes', 'bytes'],
+        [
+          (await ethers.getContractFactory('ERC1967Proxy')).bytecode,
+          ethers.defaultAbiCoder.encode(
+            ['address', 'bytes'],
+            [await groupFactory.groupImplementation(), await groupFactory.groupImplementation().interface.encodeFunctionData('initialize', [ownerAddress, tokenAddress])]
+          ),
+        ]
+      );
+
+      const predictedAddress = ethers.getCreate2Address(groupFactory.address, salt, ethers.keccak256(bytecode));
+      expect(computedAddress).to.equal(predictedAddress);
+    });
+  });
+
+  describe("Events", function () {
+    it("Should emit GroupCreated event on group creation", async function () {
+      const ownerAddress = await addr1.getAddress();
+      const tokenAddress = ethers.ZeroAddress;
+      const groupHash = ethers.keccak256(ethers.toUtf8Bytes("test-hash"));
+
+      await expect(groupFactory.createGroup(ownerAddress, tokenAddress, groupHash))
+        .to.emit(groupFactory, 'GroupCreated')
+        .withArgs(await groupFactory.getAddress(ownerAddress, tokenAddress, groupHash), groupHash);
+    });
+ 
