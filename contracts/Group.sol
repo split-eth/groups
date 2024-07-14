@@ -12,6 +12,8 @@ contract Group is Initializable, OwnableUpgradeable {
         string note;
     }
 
+    string public name = "Group";
+
     address public admin;
     mapping(address => string) public userNames;
     mapping(address => int256) public balances;
@@ -43,7 +45,14 @@ contract Group is Initializable, OwnableUpgradeable {
         __Ownable_init(_admin);
         admin = _admin;
         token = IERC20(_tokenAddress);
-        _addUser(_admin);
+    }
+
+    function setAdmin(address _admin) external onlyAdminOrOwner {
+        admin = _admin;
+    }
+
+    function setGroupName(string memory _name) external onlyAdminOrOwner {
+        name = _name;
     }
 
     //Retrieve the list of all current members of the group
@@ -52,8 +61,8 @@ contract Group is Initializable, OwnableUpgradeable {
     }
 
     // Set userName and address
-    function setName(address user, string memory name) external onlyAdminOrOwner {
-        userNames[user] = name;
+    function setName(address user, string memory userName) external onlyAdminOrOwner {
+        userNames[user] = userName;
     }
 
     // Admin can add a new user to the group

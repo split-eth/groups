@@ -15,10 +15,16 @@ contract GroupFactory {
         groupImplementation = new Group();
     }
 
-    function createGroup(address owner, address token, bytes32 hash) external returns (Group ret) {
-        address addr = getAddress(owner, token, hash);
+    function getGroupHash(address token, bytes32 salt) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(token, salt));
+    }
 
-        emit GroupCreated(addr, hash);
+    function createGroup(address owner, address token, bytes32 salt, string memory name) external returns (Group ret) {
+        address addr = getAddress(token, salt);
+
+        bytes32 groupHash = getGroupHash(token, salt);
+
+        emit GroupCreated(addr, groupHash);
 
         uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
@@ -26,20 +32,25 @@ contract GroupFactory {
         }
         ret = Group(
             payable(
-                new ERC1967Proxy{salt: hash}(
-                    address(groupImplementation), abi.encodeCall(Group.initialize, (owner, token))
+                new ERC1967Proxy{salt: groupHash}(
+                    address(groupImplementation), abi.encodeCall(Group.initialize, (address(this), token))
                 )
             )
         );
+
+        ret.setGroupName(name);
+        ret.transferOwnership(owner);
+        ret.addUser(owner);
+        ret.setAdmin(owner);
     }
 
-    function getAddress(address owner, address token, bytes32 hash) public view returns (address) {
+    function getAddress(address token, bytes32 salt) public view returns (address) {
         return Create2.computeAddress(
-            hash,
+            getGroupHash(token, salt),
             keccak256(
                 abi.encodePacked(
                     type(ERC1967Proxy).creationCode,
-                    abi.encode(address(groupImplementation), abi.encodeCall(Group.initialize, (owner, token)))
+                    abi.encode(address(groupImplementation), abi.encodeCall(Group.initialize, (address(this), token)))
                 )
             )
         );
